@@ -15,9 +15,13 @@ from dotenv import load_dotenv
 env_path = os.path.join(os.path.dirname(__file__), '../../.env')
 load_dotenv(env_path)
 
-VLM_ENDPOINT = os.environ.get("VLM_ENDPOINT", "<ENDPOINT_ID_FOR_DOUBAO_VISION_PRO>")
-LLM_ENDPOINT = os.environ.get("LLM_ENDPOINT", "<ENDPOINT_ID_FOR_LLM>")  # 256K model for a short term memory
+VLM_ENDPOINT = os.environ.get("VLM_ENDPOINT", "ep-20260321164103-gktml")
+LLM_ENDPOINT = os.environ.get("LLM_ENDPOINT", "ep-20260321164234-c2cpk")  # 256K model for a short term memory
 
-TTS_APP_ID = os.environ.get("TTS_APP_ID", "<TTS_APP_ID>")
-TTS_ACCESS_TOKEN = os.environ.get("TTS_ACCESS_TOKEN", "<TTS_ACCESS_TOKEN>")
+TTS_APP_ID = os.environ.get("TTS_APP_ID", "")
+if TTS_APP_ID == "<TTS_APP_ID>":
+    TTS_APP_ID = ""
+TTS_ACCESS_TOKEN = os.environ.get("TTS_ACCESS_TOKEN", "")
+if TTS_ACCESS_TOKEN == "<TTS_ACCESS_TOKEN>":
+    TTS_ACCESS_TOKEN = ""
 

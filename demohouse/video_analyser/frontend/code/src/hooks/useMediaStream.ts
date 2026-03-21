@@ -22,6 +22,11 @@ export const useMediaStream = () => {
     streamRef: MutableRefObject<MediaStream | undefined>,
   ) => {
     try {
+      // 检查是否有mediaDevices支持，部分老旧iOS浏览器（非https环境下）可能不支持
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('当前环境不支持访问媒体设备，请确保使用 HTTPS');
+      }
+
       // 获取初始媒体流
       const initialStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -55,28 +60,41 @@ export const useMediaStream = () => {
       });
 
       // 使用最佳设置获取媒体流
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: {
-            exact: deviceId,
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            facingMode: 'environment',
+            width: { ideal: maxWidth },
+            height: { ideal: maxHeight },
+            frameRate: { ideal: maxFramerate },
           },
-          facingMode: 'environment',
-          width: { ideal: maxWidth },
-          height: { ideal: maxHeight },
-          frameRate: { ideal: maxFramerate },
-        },
-        audio: true,
-      });
+          audio: true,
+        });
+      } catch (e) {
+        console.warn("Failed to get optimized stream, falling back to basic stream:", e);
+        // Fallback for iOS/Safari which sometimes rejects complex constraints
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment'
+          },
+          audio: true,
+        });
+      }
 
       // 将媒体流赋值给引用
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.volume = 0;
         videoRef.current.muted = true;
+        // 在iOS上，必须加上 playsInline 属性才能自动播放
+        videoRef.current.setAttribute('playsinline', 'true');
         videoRef.current.srcObject = stream;
       }
     } catch (error) {
-      toast('获取媒体流失败');
+      console.error('Camera access error:', error);
+      toast(error instanceof Error ? error.message : '获取媒体流失败，请检查摄像头权限');
     }
   };
 

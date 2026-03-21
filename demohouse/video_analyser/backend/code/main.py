@@ -17,6 +17,8 @@ import asyncio
 import logging
 import os
 from typing import AsyncIterable, List, Optional, Tuple, Union
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 import prompt
 import utils
@@ -366,11 +368,59 @@ async def main(request: ArkChatRequest) -> AsyncIterable[Response]:
 
 
 if __name__ == "__main__":
+    import os
     port = os.getenv("_FAAS_RUNTIME_PORT")
-    launch_serve(
-        package_path="main",
-        port=int(port) if port else 8888,
+    port = int(port) if port else 8888
+    
+    from arkitect.utils.context import set_resource_type, set_resource_id, set_account_id
+    from arkitect.telemetry.trace import setup_tracing
+    from arkitect.launcher.runner import get_default_client_configs, get_endpoint_config, get_runner
+    from arkitect.core.runtime import load_function
+    from arkitect.core.component.bot import BotServer
+    from fastapi import Request
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+    
+    set_resource_type(os.getenv("RESOURCE_TYPE") or "")
+    set_resource_id(os.getenv("RESOURCE_ID") or "")
+    set_account_id(os.getenv("ACCOUNT_ID") or "")
+    setup_tracing(endpoint=os.getenv("TRACE_ENDPOINT"), trace_on=True)
+
+    runnable_func = load_function("main", "main")
+
+    server = BotServer(
+        runner=get_runner(runnable_func),
         health_check_path="/v1/ping",
-        endpoint_path="/api/v3/bots/chat/completions",
+        endpoint_config=get_endpoint_config("/api/v3/bots/chat/completions", runnable_func),
         clients={},
     )
+    
+    app = server.app
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    
+    if os.path.isdir(static_dir):
+        # Mount assets from static/static/ (Modern.js output structure)
+        assets_dir = os.path.join(static_dir, "static")
+        if os.path.isdir(assets_dir):
+            app.mount("/static", StaticFiles(directory=assets_dir), name="static")
+            
+        # For other static files if any
+        @app.get("/{filename:path}")
+        async def serve_root_files(request: Request, filename: str):
+            file_path = os.path.join(static_dir, filename)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            # If not found, and not an API route, serve index.html for React Router
+            if not filename.startswith("api/") and not filename.startswith("v1/"):
+                index_path = os.path.join(static_dir, "html", "main", "index.html")
+                if os.path.isfile(index_path):
+                    return FileResponse(index_path)
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+        @app.get("/")
+        async def serve_index():
+            index_path = os.path.join(static_dir, "html", "main", "index.html")
+            if os.path.isfile(index_path):
+                return FileResponse(index_path)
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+            
+    server.run(app=app, host="0.0.0.0", port=port)

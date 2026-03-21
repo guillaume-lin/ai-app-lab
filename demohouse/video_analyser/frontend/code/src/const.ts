@@ -14,7 +14,7 @@ export const ScreenWidth = 430;
 export const ScreenHeight = 800;
 
 export const BaseURL =
-    process.env.NODE_ENV === 'development' ? '/api' : APP_CONTEXT.FAAS_URL;
+    process.env.NODE_ENV === 'development' ? '/api' : (APP_CONTEXT.FAAS_URL || '/api');
 
 const ASR_APP_ID = APP_CONTEXT.ASR_APP_ID;
 const ASR_ACCESS_TOKEN = APP_CONTEXT.ASR_ACCESS_TOKEN;
