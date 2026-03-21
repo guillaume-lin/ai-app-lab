@@ -27,5 +27,6 @@ interface Delta {
     data?: string;
     transcript?: string;
   };
+  content?: string;
   role?: string;
 }

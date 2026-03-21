@@ -13,6 +13,15 @@
 set -ex
 # shellcheck disable=SC2046
 cd `dirname $0`
+
+if [ -f .venv/bin/activate ]; then
+  source .venv/bin/activate
+fi
+
+if [ -f ../.env ]; then
+  export $(grep -v '^#' ../.env | xargs)
+fi
+
 export PYTHONPATH=$PYTHONPATH:/opt/bytefaas/site-packages
-export ARK_API_KEY=<YOUR API KEY>
+export ARK_API_KEY=${ARK_API_KEY:-"<YOUR API KEY>"}
 poetry run python code/main.py

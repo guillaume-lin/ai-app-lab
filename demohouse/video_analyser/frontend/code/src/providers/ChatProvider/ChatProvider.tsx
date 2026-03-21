@@ -66,9 +66,14 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const handleBotAudioPlayDone = async () => {
     audioPlayingRef.current = false;
-    await startRecording();
-    setUserPrompt('');
-    setBotContent('');
+    try {
+      await startRecording();
+    } catch (e) {
+      console.warn("Failed to restart ASR.", e);
+    }
+    // Only clear the user prompt, leave bot content for reading if no audio was played
+    // BUT we shouldn't clear user prompt immediately if we just want to read the text
+    // setUserPrompt('');
     setChatState(EChatState.UserSpeaking);
   };
   // const { addToQueue, reset: resetBotAudioPlay } = useBotAudioPlayV2({
@@ -80,6 +85,59 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
     handleBotAudioPlayDone,
     true,
   );
+
+  const sendTextMessage = async (text: string) => {
+    stopRecording();
+    setUserPrompt(text);
+
+    const shouldFetch =
+      !isWaitingBotSSEChunkRef.current && !audioPlayingRef.current;
+    if (shouldFetch || true) { // Always allow fetch for text messages since we disabled audio dependency
+      setIsWaitingBotSSEChunk(true);
+      const frameNow = await captureAnnotatedFrame();
+      setChatState(EChatState.BotThinking);
+      setBotContent(''); // Clear any previous bot content when a new request starts
+      fetchVlmText(
+        ctxId.current,
+        frameNow,
+        text,
+        chunk => {
+          const { content: botContent, audio } = getLlmRespContent(chunk);
+          console.log('Received bot content in provider:', botContent);
+          
+          // 如果状态还是 thinking，且有内容，就切到 speaking
+          if (chatStateRef.current === EChatState.BotThinking && botContent && botContent !== '【思考中】') {
+            annoRef.current?.removeDisplayedPaths();
+            setChatState(EChatState.BotSpeaking);
+          }
+
+          if (botContent && botContent !== '【思考中】') {
+            // 确保能拿到最新的 prev 状态，对于文本模型直接追加
+            setBotContent(prev => {
+              const newContent = prev + botContent;
+              console.log('Updating botContent state to:', newContent);
+              return newContent;
+            });
+          }
+          if (audio) {
+            addAudio(audio);
+            if (!audioPlayingRef.current) {
+              play();
+              audioPlayingRef.current = true;
+            }
+          }
+        },
+        reqId => {
+          setIsWaitingBotSSEChunk(false);
+          markAudioDataFinished();
+          // if there is no audio playing, trigger play done immediately to reset state
+          if (!audioPlayingRef.current) {
+            handleBotAudioPlayDone();
+          }
+        },
+      );
+    }
+  };
 
   const {
     stopRecording,
@@ -109,17 +167,20 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
           text,
           chunk => {
             const { content: botContent, audio } = getLlmRespContent(chunk);
-            if (botContent) {
-              if (botContent === '【思考中】') {
-                return;
-              }
+            console.log('Received bot content in provider (voice):', botContent);
+            
+            if (chatStateRef.current === EChatState.BotThinking && botContent && botContent !== '【思考中】') {
+              annoRef.current?.removeDisplayedPaths();
+              setChatState(EChatState.BotSpeaking);
+            }
 
-              if (chatStateRef.current !== EChatState.BotSpeaking) {
-                annoRef.current?.removeDisplayedPaths();
-                setChatState(EChatState.BotSpeaking);
-              }
-              setUserPrompt(''); // 清空用户输入
-              setBotContent(prev => prev + botContent);
+            if (botContent && botContent !== '【思考中】') {
+              // 确保能拿到最新的 prev 状态，对于文本模型直接追加
+              setBotContent(prev => {
+                const newContent = prev + botContent;
+                console.log('Updating botContent state to (voice):', newContent);
+                return newContent;
+              });
             }
             if (audio) {
               addAudio(audio);
@@ -131,7 +192,11 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
           },
           reqId => {
             setIsWaitingBotSSEChunk(false);
-            markAudioDataFinished();
+            markAudioDataFinished(); 
+            // if there is no audio playing, trigger play done immediately to reset state
+            if (!audioPlayingRef.current) {
+              handleBotAudioPlayDone();
+            }
           },
         );
       }
@@ -141,9 +206,13 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
   const start = async () => {
     ctxId.current = uuidv4();
     await getMediaStream(streamRef);
-    await connectAsrWs();
+    try {
+      await connectAsrWs();
+      await startRecording();
+    } catch (e) {
+      console.warn("Failed to connect to ASR. Voice input may not work. You can still use text input.", e);
+    }
 
-    await startRecording();
     startCapture();
     setIsCameraOn(true);
     setChatState(EChatState.UserSpeaking);
@@ -166,9 +235,13 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
     resetAudio();
     audioPlayingRef.current = false;
 
-    await connectAsrWs();
-    // resumeRecording()
-    startRecording();
+    try {
+      await connectAsrWs();
+      // resumeRecording()
+      startRecording();
+    } catch (e) {
+      console.warn("Failed to connect to ASR. Voice input may not work. You can still use text input.", e);
+    }
     annoRef.current?.clearAnnotations();
     annoRef.current?.removeDisplayedPaths();
 
@@ -199,6 +272,7 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
         userPrompt,
         userAudioWaveHeights,
         botContent,
+        sendTextMessage,
         //
         annoRef,
         videoRef,

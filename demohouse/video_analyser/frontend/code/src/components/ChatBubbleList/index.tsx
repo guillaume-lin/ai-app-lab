@@ -21,14 +21,19 @@ export const ChatBubbleList = ({
   botContent,
   className,
 }: IChatBubbleListProps) => {
+  console.log('ChatBubbleList render, userContent:', userContent, 'botContent:', botContent);
   return (
-    <div className={`flex flex-col gap-[8px] w-full px-[24px] ${className}`}>
-      <div className={'self-end'}>
-        <ChatBubble role={'user'} content={userContent} />
-      </div>
-      <div className={'self-start'}>
-        <ChatBubble role={'bot'} content={botContent} />
-      </div>
+    <div className={`flex flex-col gap-[8px] w-full px-[24px] pointer-events-none ${className}`}>
+      {userContent && (
+        <div className={'self-end max-w-[80%] pointer-events-auto'}>
+          <ChatBubble role={'user'} content={userContent} />
+        </div>
+      )}
+      {botContent && (
+        <div className={'self-start max-w-[80%] pointer-events-auto'}>
+          <ChatBubble role={'bot'} content={botContent} />
+        </div>
+      )}
     </div>
   );
 };

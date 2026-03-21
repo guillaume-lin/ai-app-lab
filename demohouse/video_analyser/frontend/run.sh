@@ -10,5 +10,10 @@
 # limitations under the License.
 
 cd code/
+
+if [ -f ../../.env ]; then
+  export $(grep -v '^#' ../../.env | xargs)
+fi
+
 pnpm install
-npx modern dev ASR_APP_ID=<ASR_APP_ID> ASR_ACCESS_TOKEN=<ASR_ACCESS_TOKEN> FAAS_URL=http://localhost:8888
+npx modern dev ASR_APP_ID=${ASR_APP_ID:-"<ASR_APP_ID>"} ASR_ACCESS_TOKEN=${ASR_ACCESS_TOKEN:-"<ASR_ACCESS_TOKEN>"} FAAS_URL=http://localhost:8888

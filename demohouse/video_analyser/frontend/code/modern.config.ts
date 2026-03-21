@@ -36,7 +36,7 @@ export default defineConfig({
     disableTsChecker: true,
   },
   dev: {
-    https: true,
+    https: false,
     host: '0.0.0.0', // 允许局域网访问
   },
   tools: {

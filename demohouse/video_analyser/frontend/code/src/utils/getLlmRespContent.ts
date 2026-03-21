@@ -15,8 +15,11 @@ export const getLlmRespContent = (
   resp: ChatCompletionChunk,
 ): { content: string; audio: string } => {
   if (resp.choices && resp.choices.length > 0) {
-    const audioObj = resp.choices[0]?.delta?.audio || {};
-    const { transcript: content = '', data: audio = '' } = audioObj;
+    const delta = resp.choices[0]?.delta || {};
+    const audioObj = delta.audio || {};
+    // If no audio object exists but we have text content, use that content directly
+    const content = audioObj.transcript || delta.content || '';
+    const audio = audioObj.data || '';
     return { content, audio };
   }
   return { content: '', audio: '' };

@@ -9,8 +9,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VLM_ENDPOINT = "<ENDPOINT_ID_FOR_DOUBAO_VISION_PRO>"
-LLM_ENDPOINT = "<ENDPOINT_ID_FOR_LLM>"  # 256K model for a short term memory
+import os
+from dotenv import load_dotenv
 
-TTS_APP_ID = "<TTS_APP_ID>"
-TTS_ACCESS_TOKEN = "<TTS_ACCESS_TOKEN>"
+env_path = os.path.join(os.path.dirname(__file__), '../../.env')
+load_dotenv(env_path)
+
+VLM_ENDPOINT = os.environ.get("VLM_ENDPOINT", "<ENDPOINT_ID_FOR_DOUBAO_VISION_PRO>")
+LLM_ENDPOINT = os.environ.get("LLM_ENDPOINT", "<ENDPOINT_ID_FOR_LLM>")  # 256K model for a short term memory
+
+TTS_APP_ID = os.environ.get("TTS_APP_ID", "<TTS_APP_ID>")
+TTS_ACCESS_TOKEN = os.environ.get("TTS_ACCESS_TOKEN", "<TTS_ACCESS_TOKEN>")
+

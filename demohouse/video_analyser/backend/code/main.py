@@ -216,36 +216,135 @@ async def default_model_calling(
         return
 
     # Initialize TTS connection asynchronously before launching LLM request to reduce latency
-    tts_client = AsyncTTSClient(
-        connection_params=ConnectionParams(
-            speaker="zh_female_tianmeixiaoyuan_moon_bigtts",
-            audio_params=AudioParams(
-                format="mp3",
-                sample_rate=24000,
+    if TTS_APP_ID and TTS_ACCESS_TOKEN:
+        tts_client = AsyncTTSClient(
+            connection_params=ConnectionParams(
+                speaker="zh_female_tianmeixiaoyuan_moon_bigtts",
+                audio_params=AudioParams(
+                    format="mp3",
+                    sample_rate=24000,
+                ),
             ),
-        ),
-        access_key=TTS_ACCESS_TOKEN,
-        app_key=TTS_APP_ID,
-        conn_id=get_reqid(),
-        log_id=get_reqid(),
-    )
-    connection_task = asyncio.create_task(tts_client.init())
+            access_key=TTS_ACCESS_TOKEN,
+            app_key=TTS_APP_ID,
+            conn_id=get_reqid(),
+            log_id=get_reqid(),
+        )
+        connection_task = asyncio.create_task(tts_client.init())
+    else:
+        tts_client = None
+        connection_task = None
 
     # Use LLM and VLM to answer user's question
     # Received a response iterator from LLM or VLM
     response_iter = await chat_with_branches(contexts, request, parameters, context_id)
-    await connection_task
+    if connection_task:
+        await connection_task
     message = ""
-    tts_stream_output = tts_client.tts(response_iter, stream=request.stream)
-    async for resp in create_bot_audio_responses(tts_stream_output, request):
-        if isinstance(resp, ArkChatCompletionChunk):
-            if len(resp.choices) > 0 and hasattr(resp.choices[0].delta, "audio"):
-                message += resp.choices[0].delta.audio.get("transcript", "")
-        else:
-            if len(resp.choices) > 0 and resp.choices[0].message.audio:
-                message += resp.choices[0].message.audio.transcript
-        yield resp
-    await tts_client.close()
+    
+    if tts_client:
+        tts_stream_output = tts_client.tts(response_iter, stream=request.stream)
+        async for resp in create_bot_audio_responses(tts_stream_output, request):
+            if isinstance(resp, ArkChatCompletionChunk):
+                if len(resp.choices) > 0 and hasattr(resp.choices[0].delta, "audio"):
+                    message += resp.choices[0].delta.audio.get("transcript", "")
+            else:
+                if len(resp.choices) > 0 and resp.choices[0].message.audio:
+                    message += resp.choices[0].message.audio.transcript
+            yield resp
+        await tts_client.close()
+    else:
+        async for resp in response_iter:
+            logger.info(f"Got resp: {type(resp)}")
+            if isinstance(resp, ArkChatCompletionChunk):
+                if len(resp.choices) > 0:
+                    delta = resp.choices[0].delta
+                    # Dynamically set audio property to delta
+                    if hasattr(delta, "content") and delta.content:
+                        message += delta.content
+                        
+                        safe_content = delta.content.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
+                        logger.info(f"Sending stream chunk: {safe_content}")
+                        
+                        # Instead of returning a string with JSON or a Pydantic model
+                        # Arkitect expects raw strings prefixed with "data: " for SSE
+                        import json
+                        chunk_dict = {
+                            "id": resp.id,
+                            "object": resp.object,
+                            "created": resp.created,
+                            "model": resp.model,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {
+                                    "content": delta.content,
+                                    "role": "assistant",
+                                    "audio": {
+                                        "transcript": delta.content,
+                                        "data": ""
+                                    }
+                                }
+                            }]
+                        }
+                        
+                        # We must yield an object that arkitect streaming layer understands
+                        # The Arkitect framework expects an object that can be serialized or an already serialized chunk object
+                        class FallbackChunk(ArkChatCompletionChunk):
+                            def model_dump(self, *args, **kwargs):
+                                return chunk_dict
+                                
+                            def model_dump_json(self, *args, **kwargs):
+                                return json.dumps(chunk_dict, ensure_ascii=False)
+                                
+                            def __dict__(self):
+                                return chunk_dict
+                        
+                        # Set up the fallback object with basic required attributes
+                        fb_chunk = FallbackChunk(id=resp.id, object=resp.object, created=resp.created, model=resp.model, choices=[])
+                        yield fb_chunk
+                        continue
+            else:
+                if len(resp.choices) > 0:
+                    msg = resp.choices[0].message
+                    if hasattr(msg, "content") and msg.content:
+                        message += msg.content
+                        
+                        safe_content = msg.content.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
+                        logger.info(f"Sending message chunk: {safe_content}")
+                        
+                        import json
+                        msg_dict = {
+                            "id": resp.id,
+                            "object": resp.object,
+                            "created": resp.created,
+                            "model": resp.model,
+                            "choices": [{
+                                "index": 0,
+                                "message": {
+                                    "content": msg.content,
+                                    "role": "assistant",
+                                    "audio": {
+                                        "transcript": msg.content,
+                                        "data": ""
+                                    }
+                                }
+                            }]
+                        }
+                        
+                        class FallbackMsgChunk(ArkChatCompletionChunk):
+                            def model_dump(self, *args, **kwargs):
+                                return msg_dict
+                                
+                            def model_dump_json(self, *args, **kwargs):
+                                return json.dumps(msg_dict, ensure_ascii=False)
+                                
+                            def __dict__(self):
+                                return msg_dict
+                        
+                        fb_msg_chunk = FallbackMsgChunk(id=resp.id, object=resp.object, created=resp.created, model=resp.model, choices=[])
+                        yield fb_msg_chunk
+                        continue
+            yield resp
     text = ""
     if isinstance(request.messages[-1].content, list) and isinstance(
         request.messages[-1].content[0], ChatCompletionMessageTextPart

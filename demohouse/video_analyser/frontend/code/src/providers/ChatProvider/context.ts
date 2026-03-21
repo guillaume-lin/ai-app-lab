@@ -34,6 +34,7 @@ interface IChatContext {
   userPrompt: string;
   userAudioWaveHeights: { bar1: number; bar2: number; bar3: number };
   botContent: string;
+  sendTextMessage: (text: string) => Promise<void>;
   //
   playVideoWithStream: () => void;
   frameCanvasRef: React.RefObject<HTMLCanvasElement>;

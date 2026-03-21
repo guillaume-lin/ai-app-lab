@@ -122,7 +122,13 @@ export const useAudioRecorder = (
   const startRecording = async () => {
     if (streamRef.current) {
       if (readyState !== WebSocket.OPEN) {
-        await connect();
+        try {
+          await connect();
+        } catch (e) {
+          console.warn("ASR Connection failed, skipping audio streaming...");
+          // Let the promise resolve, but don't start the audio recorder since ASR is dead
+          return;
+        }
       }
       isAlreadyDefinite.current = false; //reset
       audioContextRef.current = new AudioContext();
@@ -144,8 +150,10 @@ export const useAudioRecorder = (
           }
 
           const pcm = recordResult.slice(44);
-
-          sendAudio(pcm);
+          
+          if (readyState === WebSocket.OPEN) {
+            sendAudio(pcm);
+          }
         },
       });
       isRecordingRef.current = true;

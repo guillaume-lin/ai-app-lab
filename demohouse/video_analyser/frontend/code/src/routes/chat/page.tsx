@@ -35,8 +35,10 @@ const Chat = () => {
     playVideoWithStream,
     videoRef,
     frameCanvasRef,
+    sendTextMessage,
   } = useContext(ChatContext);
   const navigate = useNavigate();
+  const [inputText, setInputText] = React.useState('');
   useEffect(() => {
     if (chatState === EChatState.Idle) {
       navigate('/chat/auth');
@@ -81,7 +83,7 @@ const Chat = () => {
     >
       <div
         className={
-          'z-10 opacity-60 absolute top-0 w-full h-[360px] bg-gradient-to-t from-black/20 to-black/100'
+          'z-10 opacity-60 absolute top-0 w-full h-[360px] bg-gradient-to-t from-black/20 to-black/100 pointer-events-none'
         }
       />
       <IconClose
@@ -105,21 +107,57 @@ const Chat = () => {
         style={{ display: 'none' }}
         className={'w-full h-full'}
       />
-      {previewConfig.showCaption && (
-        <ChatBubbleList
-          className={'absolute bottom-[200px] z-20'}
-          userContent={userPrompt}
-          botContent={botContent}
-        />
+      
+      {/* 光标标识 - 帮助定位字幕位置 */}
+      {(!botContent && chatState === EChatState.BotThinking) && (
+        <div className="absolute bottom-[200px] w-full flex justify-start px-[24px] z-[1000] pointer-events-none">
+          <div className="bg-white/20 px-4 py-2 rounded-lg flex items-center gap-2">
+            <div className="w-2 h-4 bg-blue-500 animate-pulse"></div>
+            <span className="text-white/70 text-sm">Waiting for response...</span>
+          </div>
+        </div>
       )}
+
+      {/* Chat bubble list for user and bot messages */}
+      <div className="absolute bottom-[200px] w-full z-[1000] pointer-events-none">
+        <ChatBubbleList userContent={userPrompt} botContent={botContent} />
+      </div>
       {/*底部*/}
-      <div className={'absolute w-full bottom-0 h-[360px]'}>
+      <div className={'absolute w-full bottom-0 h-[360px] pointer-events-none'}>
         {/*底部控制按钮*/}
         <div
-          className={'w-full flex justify-center absolute bottom-[80px] z-30'}
+          className={'w-full flex justify-center absolute bottom-[80px] z-30 pointer-events-auto'}
         >
           {chatState === EChatState.UserSpeaking && (
-            <VoiceBubble state={BubbleState.RECORDING} />
+            <div className="flex flex-col items-center gap-4">
+              <VoiceBubble state={BubbleState.RECORDING} />
+              <div className="flex w-[300px] gap-2">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={e => setInputText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && inputText.trim()) {
+                      sendTextMessage(inputText.trim());
+                      setInputText('');
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 rounded-full bg-black/40 text-white placeholder-white/70 border border-white/50 outline-none backdrop-blur-md"
+                  placeholder="Type a message..."
+                />
+                <button
+                  onClick={() => {
+                    if (inputText.trim()) {
+                      sendTextMessage(inputText.trim());
+                      setInputText('');
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-500 rounded-full text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
           )}
           {chatState === EChatState.BotSpeaking &&
             previewConfig.showInterruptBtn && (

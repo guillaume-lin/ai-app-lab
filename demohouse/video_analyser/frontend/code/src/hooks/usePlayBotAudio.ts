@@ -44,6 +44,10 @@ export const usePlayBotAudio = (
 
   const markAudioDataFinished = () => {
     audioDataFinishedRef.current = true;
+    if (!isPlaying && audioDataRef.current.length === 0) {
+      onAudioEnded?.();
+      audioDataFinishedRef.current = false;
+    }
   };
 
   /**
@@ -68,23 +72,29 @@ export const usePlayBotAudio = (
       const b64 = audioDataRef.current.shift();
 
       if (b64) {
-        sourceRef.current = audioContextRef.current.createBufferSource();
-        console.log('#b64', b64);
-        const arrayBuffer = base64ToArrayBuffer(b64);
-        const audioData = await audioContextRef.current.decodeAudioData(
-          new Uint8Array(arrayBuffer).buffer,
-        );
-        sourceRef.current.buffer = audioData;
-        sourceRef.current.connect(audioContextRef.current.destination);
-        if (sourceRef.current) {
-          sourceRef.current.addEventListener('ended', () => {
-            playNextAudio();
-          });
-        }
+        try {
+          sourceRef.current = audioContextRef.current.createBufferSource();
+          console.log('#b64', b64);
+          const arrayBuffer = base64ToArrayBuffer(b64);
+          const audioData = await audioContextRef.current.decodeAudioData(
+            new Uint8Array(arrayBuffer).buffer,
+          );
+          sourceRef.current.buffer = audioData;
+          sourceRef.current.connect(audioContextRef.current.destination);
+          if (sourceRef.current) {
+            sourceRef.current.addEventListener('ended', () => {
+              playNextAudio();
+            });
+          }
 
-        sourceRef.current.start(0);
-        setIsPlaying(true);
-        setIsPaused(false);
+          sourceRef.current.start(0);
+          setIsPlaying(true);
+          setIsPaused(false);
+        } catch (e) {
+          console.warn('Failed to play audio chunk, likely due to missing or invalid audio data.', e);
+          // If decoding fails, skip to next audio or end
+          playNextAudio();
+        }
       }
     } else {
       setIsPlaying(false);

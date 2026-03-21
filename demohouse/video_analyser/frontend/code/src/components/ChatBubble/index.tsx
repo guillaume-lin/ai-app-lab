@@ -32,7 +32,7 @@ export const ChatBubble = ({ role, content }: IChatBubbleProps) => {
   });
 
   const botBubbleTransitions = useTransition(
-    chatState !== EChatState.UserSpeaking,
+    true, // Force true to avoid animation unmounting when content arrives
     {
       from: { opacity: 0, transform: 'translateY(-20px)' },
       enter: { opacity: 1, transform: 'translateY(0)' },
@@ -66,12 +66,12 @@ export const ChatBubble = ({ role, content }: IChatBubbleProps) => {
           s.bubbleBot,
         )}
       >
-        {chatState === EChatState.BotThinking ? (
+        {chatState === EChatState.BotThinking && !content ? (
           <div className={'flex items-center justify-center'}>
             <IconDoubao /> <div className="text-white text-[16px]">...</div>
           </div>
         ) : (
-          <div>{content}</div>
+          <div>{content || '...'}</div>
         )}
       </animated.div>
     ) : null,
