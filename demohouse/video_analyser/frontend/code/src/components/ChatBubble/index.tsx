@@ -11,7 +11,6 @@
 
 import clsx from 'classnames';
 import s from './index.module.less';
-import { IconDoubao } from '@/images/IconDoubao';
 import { ChatContext, EChatState } from '@/providers/ChatProvider/context';
 import { useContext } from 'react';
 import { animated, useTransition } from 'react-spring';
@@ -68,7 +67,7 @@ export const ChatBubble = ({ role, content }: IChatBubbleProps) => {
       >
         {chatState === EChatState.BotThinking && !content ? (
           <div className={'flex items-center justify-center'}>
-            <IconDoubao /> <div className="text-white text-[16px]">...</div>
+            <div className="text-white text-[16px]">...</div>
           </div>
         ) : (
           <div>{content || '...'}</div>

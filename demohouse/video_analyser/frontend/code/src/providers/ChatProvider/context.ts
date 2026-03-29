@@ -12,15 +12,23 @@
 import { createContext, Dispatch, MutableRefObject } from 'react';
 import { AnnoRef } from '@/components/DrawingBoard';
 
+export type ChatMessage = {
+  id: string;
+  role: 'user' | 'bot';
+  content: string;
+};
+
 interface IChatContext {
   previewConfig: {
     showInterruptBtn: boolean;
     showCaption: boolean;
+    continuousDetect: boolean;
   };
   setPreviewConfig: Dispatch<
     React.SetStateAction<{
       showInterruptBtn: boolean;
       showCaption: boolean;
+      continuousDetect: boolean;
     }>
   >;
   chatState: EChatState;
@@ -31,6 +39,7 @@ interface IChatContext {
 
   streamRef: MutableRefObject<MediaStream | undefined>;
   //
+  messages: ChatMessage[];
   userPrompt: string;
   userAudioWaveHeights: { bar1: number; bar2: number; bar3: number };
   botContent: string;

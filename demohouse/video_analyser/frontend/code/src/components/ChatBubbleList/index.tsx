@@ -10,30 +10,26 @@
 // limitations under the License. 
 
 import { ChatBubble } from '@/components/ChatBubble';
+import type { ChatMessage } from '@/providers/ChatProvider/context';
 
 interface IChatBubbleListProps {
-  userContent: string;
-  botContent: string;
+  messages: ChatMessage[];
   className?: string;
 }
 export const ChatBubbleList = ({
-  userContent,
-  botContent,
+  messages,
   className,
 }: IChatBubbleListProps) => {
-  console.log('ChatBubbleList render, userContent:', userContent, 'botContent:', botContent);
   return (
     <div className={`flex flex-col gap-[8px] w-full px-[24px] pointer-events-none ${className}`}>
-      {userContent && (
-        <div className={'self-end max-w-[80%] pointer-events-auto'}>
-          <ChatBubble role={'user'} content={userContent} />
+      {messages.map(m => (
+        <div
+          key={m.id}
+          className={`max-w-[80%] pointer-events-auto ${m.role === 'user' ? 'self-end' : 'self-start'}`}
+        >
+          <ChatBubble role={m.role} content={m.content} />
         </div>
-      )}
-      {botContent && (
-        <div className={'self-start max-w-[80%] pointer-events-auto'}>
-          <ChatBubble role={'bot'} content={botContent} />
-        </div>
-      )}
+      ))}
     </div>
   );
 };

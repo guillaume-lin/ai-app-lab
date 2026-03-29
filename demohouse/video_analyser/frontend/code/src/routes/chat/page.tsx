@@ -23,14 +23,16 @@ import { Border } from '@/components/Border';
 import { useSpring, animated } from 'react-spring';
 import clsx from 'classnames';
 import { usePreviewConfig } from '@/hooks/usePreviewConfig';
+import { Switch } from '@arco-design/web-react';
 const Chat = () => {
-  const { previewConfig } = usePreviewConfig();
+  const { previewConfig, setPreviewConfig } = usePreviewConfig();
   const {
     annoRef,
     interrupt,
     stop,
     userPrompt,
     botContent,
+    messages,
     chatState,
     playVideoWithStream,
     videoRef,
@@ -120,7 +122,7 @@ const Chat = () => {
 
       {/* Chat bubble list for user and bot messages */}
       <div className="absolute bottom-[200px] w-full z-[1000] pointer-events-none">
-        <ChatBubbleList userContent={userPrompt} botContent={botContent} />
+        <ChatBubbleList messages={messages} />
       </div>
       {/*底部*/}
       <div className={'absolute w-full bottom-0 h-[360px] pointer-events-none'}>
@@ -131,6 +133,15 @@ const Chat = () => {
           {chatState === EChatState.UserSpeaking && (
             <div className="flex flex-col items-center gap-4">
               <VoiceBubble state={BubbleState.RECORDING} />
+              <div className="flex items-center gap-2 text-white/80 text-sm pointer-events-auto">
+                <span>连续检测</span>
+                <Switch
+                  checked={previewConfig.continuousDetect}
+                  onChange={v =>
+                    setPreviewConfig(prev => ({ ...prev, continuousDetect: v }))
+                  }
+                />
+              </div>
               <div className="flex w-[300px] gap-2">
                 <input
                   type="text"

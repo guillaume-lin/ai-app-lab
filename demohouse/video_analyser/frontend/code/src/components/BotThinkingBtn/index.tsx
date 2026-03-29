@@ -22,7 +22,7 @@ export const BotThinkingBtn = ({ onClick }: { onClick?: () => void }) => {
         <div className={'w-[12px] h-[18px] bg-white rounded-[12px]'} />
         <div className={'w-[12px] h-[18px] bg-white rounded-[12px]'} />
       </div>
-      <div>豆包思考中</div>
+      <div>思考中</div>
     </div>
   );
 };

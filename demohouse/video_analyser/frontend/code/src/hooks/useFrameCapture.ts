@@ -58,7 +58,7 @@ export const useFrameCapture = (
       window.clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
     }
-    intervalIdRef.current = window.setInterval(captureFrame, 1000);
+    intervalIdRef.current = window.setInterval(captureFrame, 2000);
   };
 
   const stopCapture = () => {

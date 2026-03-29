@@ -9,7 +9,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License. 
 
-import { Logo } from '@/images/Logo';
 import './index.css';
 import { ChatContext } from '@/providers/ChatProvider/context';
 import { useNavigate } from '@modern-js/runtime/router';
@@ -44,7 +43,7 @@ const Demo = () => {
         'absolute left-0 top-0 w-full h-full bg-[#333] flex flex-col items-center justify-center  border-blue-400 rounded-md border'
       }
     >
-      <Logo />
+      <div className="text-white text-[22px] font-semibold">视频分析</div>
       <div className={'demo mt-[24px] mb-[44px]'}>VLM DEMO</div>
       <div className="text-white text-[16px] font-medium flex flex-col gap-1 mb-2">
         <div className={'flex items-center gap-1'}>
@@ -62,6 +61,15 @@ const Demo = () => {
             checked={previewConfig.showCaption}
             onChange={v =>
               setPreviewConfig(prev => ({ ...prev, showCaption: v }))
+            }
+          />
+        </div>
+        <div className={'flex items-center gap-1'}>
+          <span>连续检测</span>
+          <Switch
+            checked={previewConfig.continuousDetect}
+            onChange={v =>
+              setPreviewConfig(prev => ({ ...prev, continuousDetect: v }))
             }
           />
         </div>
