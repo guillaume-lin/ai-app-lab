@@ -16,6 +16,7 @@ import { usePlayBotAudio } from '@/hooks/usePlayBotAudio';
 import { defaultBarsData } from '@/hooks/useTrackUserSpeakWave';
 import { useVideoAnnotation } from '@/hooks/useVideoAnnotation';
 import { type ChatMessage, ChatContext, EChatState } from '@/providers/ChatProvider/context';
+import { fetchVlmImg } from '@/requests/fetchVlmImg';
 import { fetchVlmText } from '@/requests/fetchVlmText';
 import { useSyncRef } from '@/useSyncRef';
 import { getLlmRespContent } from '@/utils/getLlmRespContent';
@@ -27,6 +28,7 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
     showInterruptBtn: true,
     showCaption: true,
     continuousDetect: true,
+    frameCaptureIntervalMs: 500,
   });
   const previewConfigRef = useSyncRef(previewConfig);
   const [chatState, setChatState] = useState<EChatState>(EChatState.Idle);
@@ -109,6 +111,7 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
 
   const { frameCanvasRef, startCapture, stopCapture, captureAnnotatedFrame } =
     useVideoAnnotation(videoRef, annoRef, base64data => {
+      fetchVlmImg(ctxId.current, base64data);
       runContinuousPrompt(base64data);
     });
 
@@ -205,6 +208,9 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
           if (!audioPlayingRef.current) {
             handleBotAudioPlayDone();
           }
+          if (previewConfigRef.current.continuousDetect) {
+            startCapture(previewConfigRef.current.frameCaptureIntervalMs);
+          }
         },
       );
     }
@@ -276,6 +282,9 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
             if (!audioPlayingRef.current) {
               handleBotAudioPlayDone();
             }
+            if (previewConfigRef.current.continuousDetect) {
+              startCapture(previewConfigRef.current.frameCaptureIntervalMs);
+            }
           },
         );
       }
@@ -293,7 +302,7 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
     }
 
     if (previewConfigRef.current.continuousDetect) {
-      startCapture();
+      startCapture(previewConfigRef.current.frameCaptureIntervalMs);
     }
     setIsCameraOn(true);
     setChatState(EChatState.UserSpeaking);
@@ -343,11 +352,11 @@ export const ChatProvider: FC<PropsWithChildren> = ({ children }) => {
     if (!isCameraOnRef.current) return;
 
     if (previewConfig.continuousDetect) {
-      startCapture();
+      startCapture(previewConfig.frameCaptureIntervalMs);
     } else {
       stopCapture();
     }
-  }, [previewConfig.continuousDetect]);
+  }, [previewConfig.continuousDetect, previewConfig.frameCaptureIntervalMs]);
 
   return (
     <ChatContext.Provider

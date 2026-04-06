@@ -26,6 +26,7 @@ import { usePreviewConfig } from '@/hooks/usePreviewConfig';
 import { Switch } from '@arco-design/web-react';
 const Chat = () => {
   const { previewConfig, setPreviewConfig } = usePreviewConfig();
+  const clampIntervalMs = (v: number) => Math.min(10000, Math.max(500, v));
   const {
     annoRef,
     interrupt,
@@ -130,51 +131,75 @@ const Chat = () => {
         <div
           className={'w-full flex justify-center absolute bottom-[80px] z-30 pointer-events-auto'}
         >
-          {chatState === EChatState.UserSpeaking && (
-            <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4">
+            {chatState === EChatState.UserSpeaking && (
               <VoiceBubble state={BubbleState.RECORDING} />
-              <div className="flex items-center gap-2 text-white/80 text-sm pointer-events-auto">
-                <span>连续检测</span>
-                <Switch
-                  checked={previewConfig.continuousDetect}
-                  onChange={v =>
-                    setPreviewConfig(prev => ({ ...prev, continuousDetect: v }))
-                  }
-                />
-              </div>
-              <div className="flex w-[300px] gap-2">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={e => setInputText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && inputText.trim()) {
-                      sendTextMessage(inputText.trim());
-                      setInputText('');
-                    }
-                  }}
-                  className="flex-1 px-4 py-2 rounded-full bg-black/40 text-white placeholder-white/70 border border-white/50 outline-none backdrop-blur-md"
-                  placeholder="Type a message..."
-                />
-                <button
-                  onClick={() => {
-                    if (inputText.trim()) {
-                      sendTextMessage(inputText.trim());
-                      setInputText('');
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-500 rounded-full text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
-                >
-                  Send
-                </button>
-              </div>
-            </div>
-          )}
-          {chatState === EChatState.BotSpeaking &&
-            previewConfig.showInterruptBtn && (
-              <InterruptBtn onClick={handleInterrupt} />
             )}
-          {chatState === EChatState.BotThinking && <BotThinkingBtn />}
+            {chatState === EChatState.BotSpeaking &&
+              previewConfig.showInterruptBtn && (
+                <InterruptBtn onClick={handleInterrupt} />
+              )}
+            {chatState === EChatState.BotThinking && <BotThinkingBtn />}
+
+            {/* 永远显示的控制项 */}
+            <div className="flex items-center gap-2 text-white/80 text-sm pointer-events-auto">
+              <span>连续检测</span>
+              <Switch
+                checked={previewConfig.continuousDetect}
+                onChange={v =>
+                  setPreviewConfig(prev => ({ ...prev, continuousDetect: v }))
+                }
+              />
+            </div>
+            <div className="flex items-center gap-2 text-white/80 text-sm pointer-events-auto">
+              <span>采样(毫秒)</span>
+              <input
+                type="number"
+                min={500}
+                max={10000}
+                step={500}
+                value={previewConfig.frameCaptureIntervalMs}
+                onChange={e => {
+                  const next = Number.parseInt(e.target.value, 10);
+                  if (Number.isNaN(next)) return;
+                  setPreviewConfig(prev => ({
+                    ...prev,
+                    frameCaptureIntervalMs: clampIntervalMs(next),
+                  }));
+                }}
+                className="w-[140px] px-2 py-1 rounded bg-black/40 text-white border border-white/50 outline-none backdrop-blur-md"
+              />
+              <span className="text-white/60 text-[12px]">
+                {(1000 / previewConfig.frameCaptureIntervalMs).toFixed(2)} FPS
+              </span>
+            </div>
+            <div className="flex w-[300px] gap-2 pointer-events-auto">
+              <input
+                type="text"
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && inputText.trim()) {
+                    sendTextMessage(inputText.trim());
+                    setInputText('');
+                  }
+                }}
+                className="flex-1 px-4 py-2 rounded-full bg-black/40 text-white placeholder-white/70 border border-white/50 outline-none backdrop-blur-md"
+                placeholder="Type a message..."
+              />
+              <button
+                onClick={() => {
+                  if (inputText.trim()) {
+                    sendTextMessage(inputText.trim());
+                    setInputText('');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-500 rounded-full text-white font-medium hover:bg-blue-600 transition-colors shadow-lg"
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
         <div
           className={

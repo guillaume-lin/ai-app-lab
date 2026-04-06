@@ -53,12 +53,13 @@ export const useFrameCapture = (
     }
   };
 
-  const startCapture = () => {
+  const startCapture = (intervalMs = 500) => {
     if (intervalIdRef.current) {
       window.clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
     }
-    intervalIdRef.current = window.setInterval(captureFrame, 2000);
+    captureFrame();
+    intervalIdRef.current = window.setInterval(captureFrame, intervalMs);
   };
 
   const stopCapture = () => {

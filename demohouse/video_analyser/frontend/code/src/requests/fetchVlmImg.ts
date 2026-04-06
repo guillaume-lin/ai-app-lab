@@ -14,8 +14,8 @@ import { BaseURL } from '@/const';
 export function fetchVlmImg(ctxId: string, base64data: string) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => {
-    controller.abort('timeout 1s');
-  }, 1000);
+    controller.abort('timeout 5s');
+  }, 5000);
 
   //
   const myHeaders = new Headers();

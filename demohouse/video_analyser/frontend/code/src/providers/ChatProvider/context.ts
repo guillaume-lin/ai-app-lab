@@ -23,12 +23,14 @@ interface IChatContext {
     showInterruptBtn: boolean;
     showCaption: boolean;
     continuousDetect: boolean;
+    frameCaptureIntervalMs: number;
   };
   setPreviewConfig: Dispatch<
     React.SetStateAction<{
       showInterruptBtn: boolean;
       showCaption: boolean;
       continuousDetect: boolean;
+      frameCaptureIntervalMs: number;
     }>
   >;
   chatState: EChatState;

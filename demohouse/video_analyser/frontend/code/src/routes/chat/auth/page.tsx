@@ -20,11 +20,14 @@ const Demo = () => {
   const navigate = useNavigate();
   const { start } = useContext(ChatContext);
   const { previewConfig, setPreviewConfig } = usePreviewConfig();
+  const clampIntervalMs = (v: number) => Math.min(10000, Math.max(500, v));
   async function enterFullscreenPortrait() {
     try {
       await document.documentElement.requestFullscreen();
-      if (screen.orientation && screen.orientation?.lock) {
-        await screen.orientation?.lock('portrait');
+      const lock = (screen.orientation as unknown as { lock?: (orientation: string) => Promise<void> })
+        ?.lock;
+      if (typeof lock === 'function') {
+        await lock('portrait');
       }
     } catch (error) {
       console.error('Error entering fullscreen or locking orientation:', error);
@@ -72,6 +75,28 @@ const Demo = () => {
               setPreviewConfig(prev => ({ ...prev, continuousDetect: v }))
             }
           />
+        </div>
+        <div className={'flex items-center gap-2'}>
+          <span>采样(毫秒)</span>
+          <input
+            type="number"
+            min={500}
+            max={10000}
+            step={500}
+            value={previewConfig.frameCaptureIntervalMs}
+            onChange={e => {
+              const next = Number.parseInt(e.target.value, 10);
+              if (Number.isNaN(next)) return;
+              setPreviewConfig(prev => ({
+                ...prev,
+                frameCaptureIntervalMs: clampIntervalMs(next),
+              }));
+            }}
+            className="w-[140px] px-2 py-1 rounded bg-black/40 text-white border border-white/40 outline-none"
+          />
+          <span className="text-white/60 text-[12px]">
+            {(1000 / previewConfig.frameCaptureIntervalMs).toFixed(2)} FPS
+          </span>
         </div>
       </div>
       <Button
